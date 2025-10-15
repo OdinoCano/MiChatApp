@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Text,
   ActivityIndicator,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import apiService from '../services/api';
 import websocketService from '../services/websocket';
+import colors from '../theme/colors';
 
 const LoginScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,9 +31,9 @@ const LoginScreen: React.FC = () => {
     try {
       const response = await apiService.login(email, password);
 
-      if (response.token) {
+      if (response.access_token) {
         // Initialize WebSocket
-        websocketService.initialize(response.token);
+        websocketService.initialize(response.access_token);
 
         // Navigate to chat list
         navigation.navigate('ChatList' as never);
@@ -48,44 +51,59 @@ const LoginScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
       <View style={styles.content}>
-        <Text style={styles.title}>FASHIONme Chat</Text>
-        <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
+        <View style={styles.logoContainer}>
+          <Text style={styles.brandName}>MiChatApp</Text>
+          <Text style={styles.brandTagline}>LUXURY STYLING EXPERIENCE</Text>
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#999"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          editable={!loading}
-        />
+        <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="tu@email.com"
+              placeholderTextColor={colors.textLight}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              editable={!loading}
+            />
+          </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Contraseña"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!loading}
-        />
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>CONTRASEÑA</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="••••••••"
+              placeholderTextColor={colors.textLight}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              editable={!loading}
+            />
+          </View>
+        </View>
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleLogin}
-          disabled={loading}>
+          disabled={loading}
+          activeOpacity={0.8}
+        >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.textWhite} />
           ) : (
-            <Text style={styles.buttonText}>Iniciar sesión</Text>
+            <Text style={styles.buttonText}>INICIAR SESIÓN</Text>
           )}
         </TouchableOpacity>
 
+        <Text style={styles.footer}>Experiencia de asesoría personalizada</Text>
+
         <Text style={styles.hint}>
-          URL del servidor: http://fashion-me.test
+          URL del servidor: http://192.168.3.143
         </Text>
       </View>
     </View>
@@ -95,56 +113,89 @@ const LoginScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    padding: 24,
+    padding: 32,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#3b5de7',
-    textAlign: 'center',
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 60,
+  },
+  brandName: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: 4,
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+  brandTagline: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: colors.secondary,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  form: {
     marginBottom: 32,
   },
+  inputContainer: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.text,
+    letterSpacing: 1.5,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    borderColor: colors.border,
+    borderRadius: 2,
     padding: 16,
     fontSize: 16,
-    marginBottom: 16,
-    color: '#000',
+    color: colors.text,
+    fontWeight: '400',
   },
   button: {
-    backgroundColor: '#3b5de7',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+    padding: 18,
     alignItems: 'center',
     marginTop: 8,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.textLight,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.textWhite,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  footer: {
+    marginTop: 32,
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   hint: {
     marginTop: 24,
-    fontSize: 12,
-    color: '#999',
+    fontSize: 10,
+    color: colors.textLight,
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
 });
 

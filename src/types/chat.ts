@@ -2,6 +2,18 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  slug: string;
+  genre: 'man' | 'woman' | 'other';
+  role_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LoginResponse {
+  data: User;
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
 }
 
 export interface ChatMessage {

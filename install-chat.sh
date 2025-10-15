@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Instalando FASHIONme Chat App..."
+echo "🚀 Instalando MiChatApp App..."
 echo ""
 
 # Verificar si estamos en el directorio correcto

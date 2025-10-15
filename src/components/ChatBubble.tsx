@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ChatMessage } from '../types/chat';
+import colors from '../theme/colors';
 
 interface ChatBubbleProps {
   message: ChatMessage;
@@ -53,8 +54,8 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({ message, isOwnMessage }) => {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    marginVertical: 4,
-    marginHorizontal: 12,
+    marginVertical: 6,
+    marginHorizontal: 16,
   },
   ownMessageContainer: {
     justifyContent: 'flex-end',
@@ -63,45 +64,58 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   bubble: {
-    maxWidth: '75%',
-    padding: 12,
-    borderRadius: 16,
+    maxWidth: '80%',
+    padding: 16,
+    borderRadius: 2,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   ownMessage: {
-    backgroundColor: '#3b5de7',
-    borderBottomRightRadius: 4,
+    backgroundColor: colors.messageSent,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomLeftRadius: 12,
   },
   otherMessage: {
-    backgroundColor: '#f0f0f0',
-    borderBottomLeftRadius: 4,
+    backgroundColor: colors.messageReceived,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
   },
   senderName: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#666',
-    marginBottom: 4,
+    color: colors.secondary,
+    marginBottom: 6,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   messageText: {
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
+    letterSpacing: 0.2,
   },
   ownMessageText: {
-    color: '#ffffff',
+    color: colors.textWhite,
   },
   otherMessageText: {
-    color: '#000000',
+    color: colors.text,
   },
   timestamp: {
-    fontSize: 11,
-    marginTop: 4,
+    fontSize: 10,
+    marginTop: 8,
+    letterSpacing: 0.5,
   },
   ownTimestamp: {
-    color: '#ffffff',
-    opacity: 0.8,
+    color: colors.textWhite,
+    opacity: 0.7,
     textAlign: 'right',
   },
   otherTimestamp: {
-    color: '#666',
+    color: colors.textLight,
     textAlign: 'left',
   },
 });

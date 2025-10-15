@@ -7,16 +7,19 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import apiService from '../services/api';
 import { Chat, ChatStatus } from '../types/chat';
+import colors from '../theme/colors';
 
 const ChatListScreen: React.FC = () => {
   const navigation = useNavigation();
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     loadChats();
@@ -44,6 +47,40 @@ const ChatListScreen: React.FC = () => {
     navigation.navigate('Chat' as never, { chatId: chat.id } as never);
   };
 
+  const handleCreateChat = async () => {
+    Alert.alert(
+      'Nuevo Chat',
+      '¿Deseas iniciar una conversación con un asesor?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Crear Chat',
+          onPress: async () => {
+            setCreating(true);
+            try {
+              const newChat = await apiService.createChat('Consulta de asesoría');
+              // Recargar la lista de chats
+              await loadChats();
+              // Navegar al nuevo chat
+              navigation.navigate('Chat' as never, { chatId: newChat.id } as never);
+            } catch (error: any) {
+              console.error('Error creating chat:', error);
+              Alert.alert(
+                'Error',
+                error.response?.data?.message || 'No se pudo crear el chat'
+              );
+            } finally {
+              setCreating(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleLogout = async () => {
     try {
       await apiService.logout();
@@ -56,22 +93,22 @@ const ChatListScreen: React.FC = () => {
   const getStatusColor = (status: ChatStatus) => {
     switch (status) {
       case ChatStatus.Accepted:
-        return '#28a745';
+        return colors.success;
       case ChatStatus.Rejected:
-        return '#dc3545';
+        return colors.error;
       default:
-        return '#ffc107';
+        return colors.secondary;
     }
   };
 
   const getStatusLabel = (status: ChatStatus) => {
     switch (status) {
       case ChatStatus.Accepted:
-        return 'Aceptado';
+        return 'ACTIVO';
       case ChatStatus.Rejected:
-        return 'Rechazado';
+        return 'CERRADO';
       default:
-        return 'Pendiente';
+        return 'PENDIENTE';
     }
   };
 
@@ -108,10 +145,14 @@ const ChatListScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mis Chats</Text>
+        <View>
+          <Text style={styles.headerTitle}>MiChatApp</Text>
+          <Text style={styles.headerSubtitle}>Conversaciones</Text>
+        </View>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Salir</Text>
+          <Text style={styles.logoutText}>SALIR</Text>
         </TouchableOpacity>
       </View>
 
@@ -125,9 +166,22 @@ const ChatListScreen: React.FC = () => {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No tienes chats activos</Text>
+            <Text style={styles.emptySubtext}>Presiona + para iniciar una conversación</Text>
           </View>
         }
       />
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={handleCreateChat}
+        disabled={creating}>
+        {creating ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.fabText}>+</Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 };
@@ -135,56 +189,76 @@ const ChatListScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundGray,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: colors.textSecondary,
+    letterSpacing: 1,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#3b5de7',
+    padding: 20,
+    paddingTop: 24,
+    backgroundColor: colors.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.secondary,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: '700',
+    color: colors.textWhite,
+    letterSpacing: 3,
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: colors.secondary,
+    letterSpacing: 1.5,
+    marginTop: 2,
   },
   logoutButton: {
-    padding: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: colors.secondary,
+    borderRadius: 2,
   },
   logoutText: {
-    color: '#fff',
-    fontSize: 14,
+    color: colors.textWhite,
+    fontSize: 11,
     fontWeight: '600',
+    letterSpacing: 1.5,
   },
   listContent: {
     flexGrow: 1,
+    paddingVertical: 8,
   },
   chatItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
-    marginHorizontal: 12,
+    backgroundColor: colors.background,
+    padding: 20,
+    marginHorizontal: 16,
     marginVertical: 6,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    borderRadius: 2,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.secondary,
+    shadowColor: colors.shadowDark,
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   chatContent: {
     flex: 1,
@@ -192,34 +266,68 @@ const styles = StyleSheet.create({
   chatTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
+    color: colors.text,
+    marginBottom: 6,
+    letterSpacing: 0.3,
   },
   chatSubtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: colors.textSecondary,
+    letterSpacing: 0.2,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 2,
   },
   statusText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600',
+    color: colors.textWhite,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-    marginTop: 48,
+    padding: 32,
+    marginTop: 80,
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
+    marginBottom: 12,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: colors.textLight,
+    textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+  fab: {
+    position: 'absolute',
+    right: 24,
+    bottom: 32,
+    width: 64,
+    height: 64,
+    borderRadius: 2,
+    backgroundColor: colors.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.shadowDark,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  fabText: {
+    fontSize: 40,
+    color: colors.textWhite,
+    fontWeight: '200',
+    lineHeight: 44,
   },
 });
 

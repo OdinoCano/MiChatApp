@@ -1,4 +1,5 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
+const nodeLibs = require('node-libs-react-native');
 
 /**
  * Metro configuration
@@ -6,6 +7,14 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
  *
  * @type {import('@react-native/metro-config').MetroConfig}
  */
-const config = {};
+const config = {
+  resolver: {
+    extraNodeModules: {
+      ...nodeLibs,
+      crypto: require.resolve('react-native-get-random-values'),
+    },
+    sourceExts: ['jsx', 'js', 'ts', 'tsx', 'json'],
+  },
+};
 
 module.exports = mergeConfig(getDefaultConfig(__dirname), config);

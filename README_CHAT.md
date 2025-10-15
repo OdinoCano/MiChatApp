@@ -1,4 +1,4 @@
-# FASHIONme Chat App 💬
+# MiChatApp App 💬
 
 Aplicación React Native con WebSocket para chat en tiempo real conectado a Laravel Reverb.
 

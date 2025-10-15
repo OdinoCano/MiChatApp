@@ -7,6 +7,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import ChatBubble from '../components/ChatBubble';
@@ -14,6 +17,7 @@ import ChatInput from '../components/ChatInput';
 import apiService from '../services/api';
 import websocketService from '../services/websocket';
 import { ChatMessage, ChatEvent, ChatStatus } from '../types/chat';
+import colors from '../theme/colors';
 
 type ChatScreenRouteProp = RouteProp<{ Chat: { chatId: number } }, 'Chat'>;
 
@@ -36,10 +40,17 @@ const ChatScreen: React.FC = () => {
 
   // Subscribe to WebSocket
   useEffect(() => {
-    if (!chatUid || !websocketService.isConnected()) {
+    if (!chatUid) {
+      console.log('⚠️ Cannot subscribe: chatUid not set');
       return;
     }
 
+    if (!websocketService.isConnected()) {
+      console.log('⚠️ Cannot subscribe: WebSocket not connected');
+      return;
+    }
+
+    console.log(`🔌 Attempting to subscribe to chat ${chatUid}`);
     const channel = websocketService.subscribeToChat(chatUid, {
       onMessage: handleNewMessage,
       onStatusUpdate: handleStatusUpdate,
@@ -48,9 +59,11 @@ const ChatScreen: React.FC = () => {
 
     return () => {
       if (chatUid) {
+        console.log(`🔌 Unsubscribing from chat ${chatUid}`);
         websocketService.unsubscribeFromChat(chatUid);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatUid]);
 
   const loadChatData = async () => {
@@ -66,9 +79,15 @@ const ChatScreen: React.FC = () => {
       setChatUid(chat.uid);
       setChatStatus(chat.status);
 
-      // In a real app, you'd fetch messages from the API
-      // For now, we'll start with an empty array
-      setMessages([]);
+      // Load messages
+      const messages = await apiService.getChatMessages(chatId);
+      console.log(`📥 Loaded ${messages.length} messages from chat ${chatId}`);
+      setMessages(messages);
+
+      // Auto-scroll to bottom after loading
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 100);
     } catch (error) {
       console.error('Error loading chat:', error);
     } finally {
@@ -88,7 +107,16 @@ const ChatScreen: React.FC = () => {
         created_at: event.created_at || new Date().toISOString(),
       };
 
-      setMessages(prev => [...prev, newMessage]);
+      // Check if message already exists to avoid duplicates
+      setMessages(prev => {
+        const exists = prev.some(msg => msg.id === newMessage.id);
+        if (exists) {
+          console.log(`⚠️ Message ${newMessage.id} already exists, skipping`);
+          return prev;
+        }
+        console.log(`📨 Adding new message ${newMessage.id} to chat`);
+        return [...prev, newMessage];
+      });
 
       // Auto-scroll to bottom
       setTimeout(() => {
@@ -120,6 +148,42 @@ const ChatScreen: React.FC = () => {
     }
   }, []);
 
+  // Handle app state changes for reconnection
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      console.log(`📱 App state changed to: ${nextAppState}`);
+      
+      if (nextAppState === 'active') {
+        console.log('🔄 App became active, checking WebSocket connection...');
+        const state = websocketService.getConnectionState();
+        console.log(`WebSocket state: ${state}`);
+        
+        if (state !== 'connected' && chatUid) {
+          console.log('🔌 Reconnecting WebSocket and resubscribing...');
+          websocketService.reconnect();
+          
+          // Wait for reconnection then resubscribe
+          setTimeout(() => {
+            if (websocketService.isConnected()) {
+              websocketService.subscribeToChat(chatUid, {
+                onMessage: handleNewMessage,
+                onStatusUpdate: handleStatusUpdate,
+                onMessageRead: handleMessageRead,
+              });
+              console.log('✅ Resubscribed to chat after reconnection');
+            }
+          }, 1500);
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [chatUid, handleNewMessage, handleStatusUpdate, handleMessageRead]);
+
   const sendMessage = async (messageText: string) => {
     try {
       const sentMessage = await apiService.sendMessage(chatId, messageText);
@@ -132,7 +196,15 @@ const ChatScreen: React.FC = () => {
         created_at: sentMessage.created_at || new Date().toISOString(),
       };
 
-      setMessages(prev => [...prev, newMessage]);
+      // Add message immediately (WebSocket will be handled by handleNewMessage with duplicate check)
+      setMessages(prev => {
+        const exists = prev.some(msg => msg.id === newMessage.id);
+        if (!exists) {
+          console.log(`✅ Message sent: ${newMessage.id}`);
+          return [...prev, newMessage];
+        }
+        return prev;
+      });
 
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
@@ -160,20 +232,20 @@ const ChatScreen: React.FC = () => {
 
   const getStatusBadge = () => {
     const labels = {
-      [ChatStatus.Pending]: 'Pendiente',
-      [ChatStatus.Accepted]: 'Aceptado',
-      [ChatStatus.Rejected]: 'Rechazado',
+      [ChatStatus.Pending]: 'PENDIENTE',
+      [ChatStatus.Accepted]: 'ACTIVO',
+      [ChatStatus.Rejected]: 'CERRADO',
     };
 
-    const colors = {
-      [ChatStatus.Pending]: '#ffc107',
-      [ChatStatus.Accepted]: '#28a745',
-      [ChatStatus.Rejected]: '#dc3545',
+    const statusColors = {
+      [ChatStatus.Pending]: colors.secondary,
+      [ChatStatus.Accepted]: colors.success,
+      [ChatStatus.Rejected]: colors.error,
     };
 
     return (
       <View
-        style={[styles.statusBadge, { backgroundColor: colors[chatStatus] }]}>
+        style={[styles.statusBadge, { backgroundColor: statusColors[chatStatus] }]}>
         <Text style={styles.statusText}>{labels[chatStatus]}</Text>
       </View>
     );
@@ -188,15 +260,17 @@ const ChatScreen: React.FC = () => {
     );
   }
 
-  const isChatActive = chatStatus === ChatStatus.Accepted;
+  // Client can send messages even in pending status to start conversation
+  const isChatActive = chatStatus === ChatStatus.Accepted || chatStatus === ChatStatus.Pending;
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Chat en vivo</Text>
+        <Text style={styles.headerTitle}>CONVERSACIÓN</Text>
         {getStatusBadge()}
       </View>
 
@@ -209,9 +283,11 @@ const ChatScreen: React.FC = () => {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>
-              {isChatActive
-                ? 'Comienza la conversación enviando el primer mensaje'
-                : 'Esperando que se acepte el chat...'}
+              {chatStatus === ChatStatus.Rejected
+                ? 'Este chat ha sido rechazado'
+                : chatStatus === ChatStatus.Pending
+                ? 'Envía un mensaje para iniciar la conversación. Un asesor te responderá pronto.'
+                : 'Comienza la conversación enviando el primer mensaje'}
             </Text>
           </View>
         }
@@ -224,9 +300,9 @@ const ChatScreen: React.FC = () => {
         onSend={sendMessage}
         disabled={!isChatActive}
         placeholder={
-          isChatActive
-            ? 'Escribe un mensaje...'
-            : 'Chat no disponible'
+          chatStatus === ChatStatus.Rejected
+            ? 'Chat rechazado'
+            : 'Escribe un mensaje...'
         }
       />
     </KeyboardAvoidingView>
@@ -236,57 +312,68 @@ const ChatScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+    marginTop: 16,
+    fontSize: 14,
+    color: colors.textSecondary,
+    letterSpacing: 1,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#f8f9fa',
+    padding: 20,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: 2,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 2,
   },
   statusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.textWhite,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
   },
   messagesList: {
     flexGrow: 1,
-    paddingVertical: 8,
+    paddingVertical: 16,
+    backgroundColor: colors.backgroundGray,
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 40,
   },
   emptyText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
+    lineHeight: 22,
+    letterSpacing: 0.3,
   },
 });
 

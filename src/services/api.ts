@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { API_CONFIG } from '../config/api';
-import { Chat, ChatMessage } from '../types/chat';
+import { Chat, ChatMessage, LoginResponse } from '../types/chat';
 
 class ApiService {
   private api: AxiosInstance;
@@ -36,10 +36,14 @@ class ApiService {
   }
 
   // Auth
-  async login(email: string, password: string) {
-    const response = await this.api.post('/login', { email, password });
-    if (response.data.token) {
-      this.setToken(response.data.token);
+  async login(email: string, password: string, deviceName: string = 'android-app'): Promise<LoginResponse> {
+    const response = await this.api.post<LoginResponse>('/login', { 
+      email, 
+      password,
+      device_name: deviceName
+    });
+    if (response.data.access_token) {
+      this.setToken(response.data.access_token);
     }
     return response.data;
   }
@@ -65,12 +69,17 @@ class ApiService {
     return response.data.data || response.data;
   }
 
-  async createChat(clientId: number): Promise<Chat> {
-    const response = await this.api.post('/chats', { client_id: clientId });
+  async createChat(subject?: string): Promise<Chat> {
+    const response = await this.api.post('/chats', { subject });
     return response.data.data || response.data;
   }
 
   // Messages
+  async getChatMessages(chatId: number): Promise<ChatMessage[]> {
+    const response = await this.api.get(`/chats/${chatId}/messages`);
+    return response.data;
+  }
+
   async sendMessage(chatId: number, message: string): Promise<ChatMessage> {
     const response = await this.api.post(`/chats/${chatId}/messages`, {
       message,

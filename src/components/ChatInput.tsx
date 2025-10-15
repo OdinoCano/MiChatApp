@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import colors from '../theme/colors';
 
 interface ChatInputProps {
   onSend: (message: string) => Promise<void>;
@@ -16,7 +17,7 @@ interface ChatInputProps {
 const ChatInput: React.FC<ChatInputProps> = ({
   onSend,
   disabled = false,
-  placeholder = 'Escribe un mensaje...',
+  placeholder = 'Escribe tu mensaje...',
 }) => {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -45,7 +46,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         value={message}
         onChangeText={setMessage}
         placeholder={placeholder}
-        placeholderTextColor="#999"
+        placeholderTextColor={colors.textLight}
         multiline
         maxLength={2000}
         editable={!disabled && !sending}
@@ -73,47 +74,61 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: 12,
-    backgroundColor: '#fff',
+    padding: 16,
+    backgroundColor: colors.background,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border,
+    shadowColor: colors.shadowDark,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 8,
   },
   input: {
     flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 20,
+    minHeight: 44,
+    maxHeight: 120,
+    backgroundColor: colors.backgroundGray,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginRight: 8,
-    fontSize: 16,
-    color: '#000',
+    paddingVertical: 12,
+    marginRight: 12,
+    fontSize: 15,
+    color: colors.text,
+    letterSpacing: 0.2,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#3b5de7',
+    width: 48,
+    height: 48,
+    borderRadius: 2,
+    backgroundColor: colors.secondary,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: colors.shadowDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   sendButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.textLight,
+    opacity: 0.5,
   },
   sendIcon: {
     width: 0,
     height: 0,
     backgroundColor: 'transparent',
     borderStyle: 'solid',
-    borderTopWidth: 6,
+    borderTopWidth: 7,
     borderRightWidth: 0,
-    borderBottomWidth: 6,
-    borderLeftWidth: 10,
+    borderBottomWidth: 7,
+    borderLeftWidth: 12,
     borderTopColor: 'transparent',
     borderRightColor: 'transparent',
     borderBottomColor: 'transparent',
-    borderLeftColor: '#fff',
+    borderLeftColor: colors.textWhite,
     marginLeft: 2,
   },
 });
