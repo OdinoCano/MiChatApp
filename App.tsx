@@ -1,45 +1,67 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
+ * FASHIONme Chat App
+ * React Native app con WebSocket para chat en tiempo real
  */
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import React from 'react';
+import 'react-native-get-random-values';
+import { StatusBar, useColorScheme } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+import LoginScreen from './src/screens/LoginScreen';
+import ChatListScreen from './src/screens/ChatListScreen';
+import ChatScreen from './src/screens/ChatScreen';
+
+export type RootStackParamList = {
+  Login: undefined;
+  ChatList: undefined;
+  Chat: { chatId: number };
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <NavigationContainer>
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        <Stack.Navigator
+          initialRouteName="Login"
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: '#3b5de7',
+            },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
+          }}>
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ChatList"
+            component={ChatListScreen}
+            options={{
+              title: 'FASHIONme Chat',
+              headerLeft: () => null,
+            }}
+          />
+          <Stack.Screen
+            name="Chat"
+            component={ChatScreen}
+            options={{ title: 'Chat' }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export default App;
